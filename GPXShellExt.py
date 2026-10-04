@@ -561,38 +561,39 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
     self.pd2d1trackcommandlist = _IUtil.Detach(d2d1trackcommandlist)
     self.pd2d1graphcommandlist = _IUtil.Detach(d2d1graphcommandlist)
     self.pd2d1devicecontext = _IUtil.Detach(d2d1devicecontext)
-    if d2d1mapbitmap is not None and (d2d1mapdevicecontext := d2d1device.CreateDeviceContext()) is not None and (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles((infos := {**cls.Infos}), None, minx, maxx, miny, maxy, **cls.Handling, max_pending=15, threads=8)) is not None:
+    if d2d1mapbitmap is not None and (d2d1mapdevicecontext := d2d1device.CreateDeviceContext()) is not None:
       self.pd2d1mapdevicecontext = d2d1mapdevicecontext.pI
       d2d1mapdevicecontext.SetDpi(dpi, dpi)
       d2d1mapdevicecontext.SetUnitMode('DIPs')
       pd2d1mapdevicecontext = wintypes.LPVOID.from_buffer(self, self.__class__.pd2d1mapdevicecontext.offset)
       vd2d1mapdevicecontext = d2d1mapdevicecontext.pI.value
       def th():
-        ti = time.time()
+        Initialize()
         d2d1mapdevicecontext.SetTarget(d2d1mapbitmap)
         d2d1mapdevicecontext.BeginDraw()
         d2d1mapdevicecontext.SetAntialiasMode('Aliased')
         d2d1mapdevicecontext.Clear((0.0, 0.5, 0.0, 1.0))
         i = 1
-        iscale = infos['scale']
-        iwidth = infos['width'] * iscale * r
-        iheight = infos['height'] * iscale * r
-        itopx = (infos['topx'] - minx) * r
-        itopy = (maxy - infos['topy']) * r
-        for row, col, tile in gen:
-          if pd2d1mapdevicecontext.value != vd2d1mapdevicecontext:
-            gen.close()
-            break
-          if tile is not None and (pstream := PCOMSTREAM.CreateInMemory(tile)):
-            if (d2d1tilebitmap := d2d1mapdevicecontext.CreateBitmapFromStream(pstream, imaging_factory=imagingfactory)) is not None:
-              if i == 0:
-                d2d1mapdevicecontext.BeginDraw()
-              d2d1mapdevicecontext.DrawBitmap(d2d1tilebitmap, (col * iwidth + itopx, row * iheight + itopy, (col + 1) * iwidth + itopx, (row + 1) * iheight + itopy), interpolation_mode='HighQualityCubic')
-              if (i := i + 1) == 8:
-                i = 0
-                d2d1mapdevicecontext.EndDraw()
-              d2d1tilebitmap.Release()
-            pstream.Release()
+        if (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles((infos := {**cls.Infos}), None, minx, maxx, miny, maxy, **cls.Handling, max_pending=15, threads=8)) is not None:
+          iscale = infos['scale']
+          iwidth = infos['width'] * iscale * r
+          iheight = infos['height'] * iscale * r
+          itopx = (infos['topx'] - minx) * r
+          itopy = (maxy - infos['topy']) * r
+          for row, col, tile in gen:
+            if pd2d1mapdevicecontext.value != vd2d1mapdevicecontext:
+              gen.close()
+              break
+            if tile is not None and (pstream := PCOMSTREAM.CreateInMemory(tile)):
+              if (d2d1tilebitmap := d2d1mapdevicecontext.CreateBitmapFromStream(pstream, imaging_factory=imagingfactory)) is not None:
+                if i == 0:
+                  d2d1mapdevicecontext.BeginDraw()
+                d2d1mapdevicecontext.DrawBitmap(d2d1tilebitmap, (col * iwidth + itopx, row * iheight + itopy, (col + 1) * iwidth + itopx, (row + 1) * iheight + itopy), interpolation_mode='HighQualityCubic')
+                if (i := i + 1) == 8:
+                  i = 0
+                  d2d1mapdevicecontext.EndDraw()
+                d2d1tilebitmap.Release()
+              pstream.Release()
         if i != 0:
           d2d1mapdevicecontext.EndDraw()
         d2d1mapdevicecontext.SetTarget()
@@ -603,6 +604,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
             hwnd.InvalidateRect()
             hwnd.Update()
         d2d1mapdevicecontext.Release()
+        Uninitialize()
       threading.Thread(target=th).start()
     return 0
   @classmethod
