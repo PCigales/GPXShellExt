@@ -3,8 +3,24 @@
 # This program is licensed under the GNU GPLv3 copyleft license (see https://www.gnu.org/licenses)
 
 from wic import *
-from wic import _IUtil, _COMMeta, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl
+from wic import _IUtil, _COMMeta, _WShUtil, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl
 import GPXTweaker
+
+SETTINGS = {
+  'smooth_range': 10.0,
+  'ele_gain_threshold': 10.0,
+  'alt_gain_threshold': 5.0,
+  'slope_range': 80.0,
+  'slope_max': 100.0,
+  'map_size': 512,
+  'map_margin': 500.0,
+  'map_infos': {**GPXTweaker.WebMercatorMap.TSAlias('IGN_CARTES'), 'matrix': '16'},
+  'map_handling': {'local_pattern': r'S:\MapTiles', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': 'GPXShellExt', 'basic_auth': None, 'extra_headers': {'Apikey': 'ign_scan_ws'}, 'only_local': False},
+  'map_track_thickness': 3.5,
+  'graph_line_thickness': 1.5,
+  'graph_font_size': 11.0,
+  'graph_font_fallback': 'Segoe UI'
+}
 
 FR_STRINGS = {
   'Path': 'Chemin',
@@ -123,7 +139,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
     while trk < nbtrk:
       track = GPXTweaker.WGS84PropertiesTrack()
       trck = trck or track
-      if not track.LoadGPX(content, trk, trck, 'f'):
+      if not track.LoadGPX(content, trk, trck, 'f', egthreshold=SETTINGS['ele_gain_threshold'], agthreshold=SETTINGS['alt_gain_threshold'], smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']):
         if trck.Wpts is None:
           nbtrk = 0
           break
@@ -328,7 +344,7 @@ class _COM_IGPXPropertyStoreDelegating(_COM_IPropertyStoreDelegating):
     m = 's' if pKey is not None and pKey.contents.pid % 100 <= 3 else 'f'
     if not pcache.GetValue(_COM_IGPXPropertyStoreDelegating.PKEY_GPXSHELLEXT_GPX_PROPGROUP):
       track = GPXTweaker.WGS84PropertiesTrack()
-      if not track.LoadGPX(content, 0, None, m):
+      if not track.LoadGPX(content, 0, None, m, egthreshold=SETTINGS['ele_gain_threshold'], agthreshold=SETTINGS['alt_gain_threshold'], smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']):
         return 0x80004005
       pcache.SetValueAndState(cls.PKEY_GPXSHELLEXT_GPX_PROPGROUP, ('VT_LPWSTR', '\u200d'), 0)
       pcache.SetValueAndState(cls.PKEY_GPXSHELLEXT_GPX_NAME, ('VT_LPWSTR', track.Name), 0)
@@ -337,7 +353,7 @@ class _COM_IGPXPropertyStoreDelegating(_COM_IPropertyStoreDelegating):
     if m == 'f':
       if track is None:
         track = GPXTweaker.WGS84PropertiesTrack()
-        if not track.LoadGPX(content, 0, None, m):
+        if not track.LoadGPX(content, 0, None, m, egthreshold=SETTINGS['ele_gain_threshold'], agthreshold=SETTINGS['alt_gain_threshold'], smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']):
           return 0x80004005
       pcache.SetValueAndState(cls.PKEY_GPXSHELLEXT_GPX_START, (('VT_EMPTY', None) if track.Start is None else ('VT_FILETIME', datetime.datetime.fromtimestamp(track.Start, datetime.UTC))), 0)
       pcache.SetValueAndState(cls.PKEY_GPXSHELLEXT_GPX_END, (('VT_EMPTY', None) if track.End is None else ('VT_FILETIME', datetime.datetime.fromtimestamp(track.End, datetime.UTC))), 0)
@@ -409,7 +425,7 @@ class _COM_IGPXPreviewHandlerVisuals(_COM_IPreviewHandlerVisuals):
         return 0x80004003
       self.font = plf.contents
       PCOM.Release(wintypes.LPVOID(self.ptextformat))
-      if (textformat := None if not (parent := self.parent) or (dwfactory := IDWriteFactory()) is None or (dwgdiinterop := dwfactory.GetGdiInterop()) is None else dwgdiinterop.CreateTextFormatFromLOGFONT(self.font, size=11)) is not None:
+      if (textformat := None if not (parent := self.parent) or (dwfactory := IDWriteFactory()) is None or (dwgdiinterop := dwfactory.GetGdiInterop()) is None else dwgdiinterop.CreateTextFormatFromLOGFONT(self.font, size=SETTINGS['graph_font_size'])) is not None:
         textformat.SetWordWrapping('NoWrap')
       self.ptextformat = _IUtil.Detach(textformat)
       return 0
@@ -428,10 +444,6 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
   _vars['graphxaxispos'] = wintypes.FLOAT
   _vars['pdwgraphlabelslayout'] = wintypes.LPVOID * 4
   _vars['graphlabelsdims'] = D2D1SIZEF * 4
-  Infos = {'alias': 'IGN_CARTES', 'matrix': '16'}
-  Handling = {'local_pattern': r'S:\MapTiles', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': '', 'basic_auth': None, 'extra_headers': None, 'only_local': True}
-  Margin = 500
-  MapSize = 512
   @classmethod
   def Load(cls, self, pI):
     if self.pd2d1devicecontext:
@@ -462,7 +474,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
       self.pd2d1devicecontext = _IUtil.Detach(d2d1devicecontext)
       return 0x80030005
     track = GPXTweaker.WGS84PreviewTrack()
-    if not track.LoadGPX(content, 0, None) or (xwpts := track.XWpts) is None or (ywpts := track.YWpts) is None or (xpts := track.XPts) is None or (ypts := track.YPts) is None or (arws := track.Arws) is None or (ds := track.Ds) is None or (hs := track.Hs) is None :
+    if not track.LoadGPX(content, 0, None, smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']) or (xwpts := track.XWpts) is None or (ywpts := track.YWpts) is None or (xpts := track.XPts) is None or (ypts := track.YPts) is None or (arws := track.Arws) is None or (ds := track.Ds) is None or (hs := track.Hs) is None :
       self.pd2d1devicecontext = _IUtil.Detach(d2d1devicecontext)
       return 0x80004005
     del track.Track
@@ -472,18 +484,18 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
     maxx = max((x for xs in (*xpts, xwpts) for x in xs))
     miny = min((y for ys in (*ypts, ywpts) for y in ys))
     maxy = max((y for ys in (*ypts, ywpts) for y in ys))
-    margin = cls.Margin
+    margin = SETTINGS['map_margin']
     wmmax = 6378137.0 * math.pi
     minx = max(min(minx - margin, wmmax), -wmmax)
     maxx = max(min(maxx + margin, wmmax), -wmmax)
     miny = max(min(miny - margin, wmmax), -wmmax)
     maxy = max(min(maxy + margin, wmmax), -wmmax)
-    bsize = cls.MapSize
+    bsize = SETTINGS['map_size']
     dx = maxx - minx
     dy = maxy - miny
     r = min(bsize / dx, bsize / dy)
-    bwidth = math.ceil(r * dx * dpi / 96)
-    bheight = math.ceil(r * dy * dpi / 96)
+    bwidth = math.ceil(r * dx * dpi / 96.0)
+    bheight = math.ceil(r * dy * dpi / 96.0)
     self.mapsize = (bwidth, bheight) if (d2d1mapbitmap := d2d1devicecontext.CreateTargetBitmap(width=bwidth, height=bheight, dpiX=dpi, dpiY=dpi, drawable=True)) is None else d2d1mapbitmap.GetSize()
     self.trackscale = r
     maxd = max(next((sds[-1] for sds in reversed(ds) if sds), 0.0), 1.0)
@@ -494,10 +506,10 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
     if (d2d1trackcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1graphcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1strokestyle := d2d1devicecontext.CreateStrokeStyle('Round', 'Round', 'Round', 'Round', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1arstrokestyle := d2d1devicecontext.CreateStrokeStyle('Flat', 'Triangle', 'Flat', 'Flat', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1redbrush := d2d1devicecontext.CreateBrush((1.0, 0.0, 0.0, 1.0))) is not None and (d2d1greybrush := d2d1devicecontext.CreateBrush((0.8, 0.8, 0.8, 1.0))) is not None and (d2d1trackpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1trackgeometrysink := d2d1trackpathgeometry.Open()) is not None and (d2d1graphpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1graphgeometrysink := d2d1graphpathgeometry.Open()) is not None:
       d2d1devicecontext.SetTarget(d2d1trackcommandlist)
       d2d1devicecontext.BeginDraw()
-      l_t = 3.5
-      p_t = 12.0
-      ar_t = 18.0
-      g_t = 1.5
+      l_t = SETTINGS['map_track_thickness']
+      p_t = l_t * 3.5
+      ar_t = l_t * 5
+      g_t = SETTINGS['graph_line_thickness']
       p0 = None
       for sxpts, sypts, sarws in zip(xpts, ypts, arws):
         if (l := min(len(sxpts), len(sypts))) == 0:
@@ -534,7 +546,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
       d2d1graphgeometrysink.Close()
       d2d1devicecontext.DrawGeometry(d2d1graphpathgeometry, d2d1redbrush, g_t, d2d1strokestyle)
       d2d1devicecontext.EndDraw()
-      if (dwfactory := IDWriteFactory()) is not None and (ptextformat := self.ptextformat or _IUtil.Detach(dwfactory.CreateTextFormat('Segoe UI', size=11))) and (dwlmindtextlayout := dwfactory.CreateTextLayout('0', ptextformat, 1e9, 1e9)) is not None and (lmindmetrics := dwlmindtextlayout.GetMetrics()) is not None and (dwlmaxdtextlayout := dwfactory.CreateTextLayout('%s %s' % (('%.1f' % (maxd / 1000)).rstrip('0').rstrip('.'), LSTRINGS['km']), ptextformat, 1e9, 1e9)) is not None and (lmaxdmetrics := dwlmaxdtextlayout.GetMetrics()) is not None and (dwlminhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (minh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lminhmetrics := dwlminhtextlayout.GetMetrics()) is not None and (dwlmaxhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (maxh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lmaxhmetrics := dwlmaxhtextlayout.GetMetrics()) is not None:
+      if (dwfactory := IDWriteFactory()) is not None and (ptextformat := self.ptextformat or _IUtil.Detach(dwfactory.CreateTextFormat(SETTINGS['graph_font_fallback'], size=SETTINGS['graph_font_size']))) and (dwlmindtextlayout := dwfactory.CreateTextLayout('0', ptextformat, 1e9, 1e9)) is not None and (lmindmetrics := dwlmindtextlayout.GetMetrics()) is not None and (dwlmaxdtextlayout := dwfactory.CreateTextLayout('%s %s' % (('%.1f' % (maxd / 1000)).rstrip('0').rstrip('.'), LSTRINGS['km']), ptextformat, 1e9, 1e9)) is not None and (lmaxdmetrics := dwlmaxdtextlayout.GetMetrics()) is not None and (dwlminhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (minh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lminhmetrics := dwlminhtextlayout.GetMetrics()) is not None and (dwlmaxhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (maxh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lmaxhmetrics := dwlmaxhtextlayout.GetMetrics()) is not None:
         dwlmindtextlayout.SetTextAlignment('Center')
         dwlmindtextlayout.SetParagraphAlignment('Near')
         dwlmaxdtextlayout.SetTextAlignment('Center')
@@ -574,7 +586,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
         d2d1mapdevicecontext.SetAntialiasMode('Aliased')
         d2d1mapdevicecontext.Clear((0.0, 0.5, 0.0, 1.0))
         i = 1
-        if (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles((infos := {**cls.Infos}), None, minx, maxx, miny, maxy, **cls.Handling, max_pending=15, threads=8)) is not None:
+        if (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles((infos := {**SETTINGS['map_infos']}), None, minx, maxx, miny, maxy, **SETTINGS['map_handling'], max_pending=15, threads=8)) is not None:
           iscale = infos['scale']
           iwidth = infos['width'] * iscale * r
           iheight = infos['height'] * iscale * r
@@ -669,8 +681,8 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
                     else:
                       mtop = 3.0 + r * bh
                       mbottom = 3.0
-                  d2d1devicecontext.DrawLine((mleft, xay), (w - mright, xay), d2d1brush, 1.0, d2d1strokestyle)
-                  d2d1devicecontext.DrawLine((mleft, h - mbottom), (mleft, mtop), d2d1brush, 1.0, d2d1strokestyle)
+                  d2d1devicecontext.DrawLine((mleft, xay), (w - mright, xay), d2d1brush, (a_t := SETTINGS['graph_line_thickness'] / 1.5), d2d1strokestyle)
+                  d2d1devicecontext.DrawLine((mleft, h - mbottom), (mleft, mtop), d2d1brush, a_t, d2d1strokestyle)
                   d2d1devicecontext.SetTransform(ID2D1Factory.MultiplyMatrix(ID2D1Factory.MakeScaleMatrix((w - mleft - mright) / ds, (h - mtop - mbottom) / hs, (0.0, 0.0)), ID2D1Factory.MakeTranslationMatrix(mleft, mtop)))
                   d2d1devicecontext.DrawImage(pd2d1graphcommandlist, interpolation_mode='HighQualityCubic')
                 d2d1devicecontext.EndDraw()
@@ -727,14 +739,23 @@ _COM_IGPXInitializePreviewHandlerWithStream._impl = _COM_IGPXPreviewHandlerWithF
 
 
 def DllInstall(bInstall, pszCmdLine):
-  if (l := len((cmdline := pszCmdLine if isinstance(pszCmdLine, str) else ctypes.wstring_at(pszCmdLine)).split('|'))) >= 3:
+  if (l := len((cmdline := pszCmdLine if isinstance(pszCmdLine, str) else ctypes.wstring_at(pszCmdLine)).split('|'))) != 1:
     return ISetLastError(0x80070057)
-  user = cmdline[1].lower() not in {'f', 'false'} if l == 2 else True
-  r = os.path.dirname(os.path.abspath(cmdline[0]))
-  p = os.path.join(r, 'GPXShellExt.propdesc')
+  rpath = os.path.dirname(os.path.abspath(cmdline[0]))
+  p = os.path.join(rpath, 'GPXShellExt.propdesc')
   Initialize()
+  r = True
   if bInstall:
-    r = os.system('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d > nul' % r) == 0
+    try:
+      if (pdpath := _WShUtil.GetKnownFolderPath('ProgramData')):
+        pdpath = os.path.abspath(pdpath).lower()
+        if os.path.commonpath((pdpath, rpath)).lower() == pdpath:
+          pcpath = os.path.join(rpath, '__pycache__')
+          if not os.path.isdir(pcpath):
+            os.mkdir(pcpath)
+          r = os.system('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d > nul' % pcpath) == 0
+    except:
+      r = False
     fmtid = _COM_IGPXPropertyStoreDelegating.FMTID_GPXSHELLEXT_GPX
     with open(p, 'wt', encoding='utf-8') as f:
       f.write('''\
@@ -867,9 +888,9 @@ if __name__ == '__main__' and len(sys.argv) >= 2:
     print(WError(r))
     sys.exit(r)
   if (a := sys.argv[1].lstrip('-/').lower()) == 'register':
-    r = DllInstall(True, '|'.join((os.path.dirname(os.path.abspath(__file__)), *sys.argv[2:])))
+    r = DllInstall(True, os.path.dirname(os.path.abspath(__file__)))
   elif a == 'unregister':
-    r = DllInstall(False, '|'.join((os.path.dirname(os.path.abspath(__file__)), *sys.argv[2:])))
+    r = DllInstall(False, os.path.dirname(os.path.abspath(__file__)))
   else:
     r = 0x80070057
   print(WError(r))
