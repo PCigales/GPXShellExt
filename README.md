@@ -109,6 +109,6 @@ The searching and the filtering of the tracks in the file explorer can be perfor
 
 <img width="472" height="509" src="https://github.com/user-attachments/assets/cfcff881-8743-48bc-96ec-dd1f0775e995" />
 <img width="618" height="553" src="https://github.com/user-attachments/assets/6694e70a-7077-47b6-81a5-18bac54fea2a" />
-<img width="1839" height="852" alt="Im3" src="https://github.com/user-attachments/assets/a49020e9-b749-443f-a176-b08603413e58" />
+<img width="1839" height="852" src="https://github.com/user-attachments/assets/a49020e9-b749-443f-a176-b08603413e58" />
 
 
