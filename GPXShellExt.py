@@ -14,13 +14,20 @@ SETTINGS = {
   'slope_max': 100.0,
   'map_size': 512,
   'map_margin': 500.0,
-  'map_infos': {**GPXTweaker.WebMercatorMap.TSAlias('OSM'), 'matrix': '14'},
-  'map_handling': {'local_pattern': r'', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': 'GPXShellExt', 'basic_auth': None, 'extra_headers': None, 'only_local': False},
+  'map_infos': {'alias': 'OSM', 'matrix': range(10, 20, 1), 'factor': 1.0},
+  'map_handling': {'local_pattern': r'%ProgramData%\GPXShellExt\cache', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': 'GPXShellExt', 'basic_auth': None, 'extra_headers': None, 'only_local': False},
+  # 'map_infos': {'alias': 'OSM', 'factor': 1.5},
+  # 'map_handling': {'local_pattern': r'%ProgramData%\GPXShellExt\cache', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': 'GPXShellExt', 'basic_auth': None, 'extra_headers': None, 'only_local': False},
   'map_track_thickness': 3.5,
   'graph_line_thickness': 1.5,
   'graph_font_size': 11.0,
   'graph_font_fallback': 'Segoe UI'
 }
+if (alias := SETTINGS['map_infos'].get('alias')) is not None and (infos := (GPXTweaker.WebMercatorMap.TSAlias if 'matrix' in SETTINGS['map_infos'] else GPXTweaker.WebMercatorMap.MSAlias)(alias)) is not None:
+  for k, v in infos.items():
+    SETTINGS['map_infos'].setdefault(k, v)
+if (cpath := SETTINGS['map_handling'].get('local_pattern')):
+   SETTINGS['map_handling']['local_pattern'] = os.path.abspath(os.path.expandvars(cpath))
 
 FR_STRINGS = {
   'Path': 'Chemin',
@@ -311,6 +318,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
 
 class _COM_IGPXShellPropSheetExt_impl(metaclass=_COMMeta, interfaces=(_COM_IShellExtInit, _COM_IGPXShellPropSheetExt)):
   CLSID = True
+  ThreadingModel = _COM_IShellPropSheetExt_impl.ThreadingModel
   Exts = ('.gpx',)
   _destroy = _COM_IShellPropSheetExt_impl._destroy
 _COM_IGPXShellPropSheetExt._impl = _COM_IGPXShellPropSheetExt_impl
@@ -401,6 +409,7 @@ class _COM_IGPXPropertyStoreCapabilities(_COM_IPropertyStoreCapabilities):
 
 class _COM_IGPXPropertyHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializePropertyStoreWithStream, _COM_IGPXPropertyStoreDelegating, _COM_IGPXPropertyStoreCapabilities)):
   CLSID = True
+  ThreadingModel = _COM_IPropertyHandler_impl.ThreadingModel
   Exts = ('.gpx',)
   ManualSafeSave = True
   _destroy = _COM_IPropertyHandler_impl._destroy
@@ -474,7 +483,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
       self.pd2d1devicecontext = _IUtil.Detach(d2d1devicecontext)
       return 0x80030005
     track = GPXTweaker.WGS84PreviewTrack()
-    if not track.LoadGPX(content, 0, None, smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']) or (xwpts := track.XWpts) is None or (ywpts := track.YWpts) is None or (xpts := track.XPts) is None or (ypts := track.YPts) is None or (arws := track.Arws) is None or (ds := track.Ds) is None or (hs := track.Hs) is None :
+    if not track.LoadGPX(content, 0, None, smdrange=SETTINGS['smooth_range'], sldrange=SETTINGS['slope_range'], slmax=SETTINGS['slope_max']) or (xwpts := track.XWpts) is None or (ywpts := track.YWpts) is None or (xpts := track.XPts) is None or (ypts := track.YPts) is None or (arws := track.Arws) is None or (ds := track.Ds) is None or (hs := track.Hs) is None:
       self.pd2d1devicecontext = _IUtil.Detach(d2d1devicecontext)
       return 0x80004005
     del track.Track
@@ -586,12 +595,20 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
         d2d1mapdevicecontext.SetAntialiasMode('Aliased')
         d2d1mapdevicecontext.Clear((0.0, 0.5, 0.0, 1.0))
         i = 1
-        if (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles((infos := {**SETTINGS['map_infos']}), None, minx, maxx, miny, maxy, **SETTINGS['map_handling'], max_pending=15, threads=8)) is not None:
-          iscale = infos['scale']
-          iwidth = infos['width'] * iscale * r
-          iheight = infos['height'] * iscale * r
-          itopx = (infos['topx'] - minx) * r
-          itopy = (maxy - infos['topy']) * r
+        if tmode := (matrix := (infos := {**SETTINGS['map_infos']}).get('matrix')) is not None:
+          m = math.log2(GPXTweaker.WGS84WebMercator.WGS84toWebMercator(0, 360)[0] / 256 * r * infos.get('factor', 1))
+          infos['matrix'] = str(next((matrix[i] for i in range(len(matrix) - 1) if abs(m - int(matrix[i])) < abs(int(matrix[i + 1]) - m)), int(matrix[-1])))
+        if (imagingfactory := IWICImagingFactory()) is not None and (gen := GPXTweaker.WebMercatorMap().ProvideTiles(infos, None, minx, miny, maxx, maxy, **SETTINGS['map_handling'], max_pending=15, threads=8) if tmode else (None if (bmap := GPXTweaker.WebMercatorMap().ProvideMap(infos, minx, miny, maxx, maxy, bsize * infos.get('factor', 1), bsize * infos.get('factor', 1), **SETTINGS['map_handling'])) is None else ((0, 0, bmap),))) is not None:
+          if tmode:
+            iscale = infos['scale'] * r
+            iwidth = infos['width'] * iscale
+            iheight = infos['height'] * iscale
+            itopx = (infos['topx'] - minx) * r
+            itopy = (maxy - infos['topy']) * r
+          else:
+            iwidth = dx * r
+            iheight = dy * r
+            itopx = itopy = 0
           for row, col, tile in gen:
             if pd2d1mapdevicecontext.value != vd2d1mapdevicecontext:
               gen.close()
@@ -716,6 +733,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
 
 class _COM_IGPXPreviewHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializePreviewHandlerWithStream, _COM_IGPXPreviewHandlerWithFrame, _COM_IGPXPreviewHandlerOleWindow, _COM_IGPXPreviewHandlerVisuals, _COM_IGPXPreviewHandler)):
   CLSID = True
+  ThreadingModel = _COM_IPreviewHandler_impl.ThreadingModel
   Exts = ('.gpx',)
   def _destroy(self):
     _COM_IPreviewHandler_impl._destroy(self)
@@ -751,9 +769,16 @@ def DllInstall(bInstall, pszCmdLine):
         pdpath = os.path.abspath(pdpath).lower()
         if os.path.commonpath((pdpath, rpath)).lower() == pdpath:
           pcpath = os.path.join(rpath, '__pycache__')
-          if not os.path.isdir(pcpath):
-            os.mkdir(pcpath)
+          os.makedirs(pcpath, exist_ok=True)
           r = os.system('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d > nul' % pcpath) == 0
+        else:
+          pdpath = None
+      if SETTINGS['map_handling'].get('local_store') and (cpath := SETTINGS['map_handling'].get('local_pattern')):
+        while '{' in cpath:
+          cpath = os.path.dirname(cpath)
+        if os.path.commonpath((rpath, os.path.dirname(cpath))).lower() == rpath.lower():
+          os.makedirs(cpath, exist_ok=True)
+          r &= os.system(('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d /setintegritylevel (OI)(CI)L> nul' if pdpath else 'icacls "%s" /inheritance:d /setintegritylevel (OI)(CI)L> nul') % cpath) == 0
     except:
       r = False
     fmtid = _COM_IGPXPropertyStoreDelegating.FMTID_GPXSHELLEXT_GPX
@@ -862,11 +887,11 @@ def DllInstall(bInstall, pszCmdLine):
 </schema>''' % (fmtid, LSTRINGS['Track'], fmtid, LSTRINGS['trackname'], LSTRINGS['Trackname'], fmtid, LSTRINGS['trackdescription'], LSTRINGS['Trackdescription'], fmtid, LSTRINGS['trackwpts'], LSTRINGS['Trackwpts'], fmtid, LSTRINGS['trackstart'], LSTRINGS['Trackstart'], fmtid, LSTRINGS['trackend'], LSTRINGS['Trackend'], fmtid, LSTRINGS['trackduration'], LSTRINGS['Trackduration'], fmtid, LSTRINGS['trackdistance'], LSTRINGS['Trackdistance'], fmtid, LSTRINGS['trackelegain'], LSTRINGS['Trackelegain'], fmtid, LSTRINGS['trackaltgain'], LSTRINGS['Trackaltgain']))
     r = r and \
       COMRegistration.RegistryAddPropertySchema(p) and \
-      COMRegistration.RegistryAddCOMFactory(_COM_IGPXShellPropSheetExt_impl, user=False, model='Apartment') and \
+      COMRegistration.RegistryAddCOMFactory(_COM_IGPXShellPropSheetExt_impl, user=False) and \
       COMRegistration.RegistryAddShellPropSheetHandler(_COM_IGPXShellPropSheetExt_impl, 'GPXShellExt', user=False) and \
-      COMRegistration.RegistryAddCOMFactory(_COM_IGPXPropertyHandler_impl, user=False, model='Apartment') and \
+      COMRegistration.RegistryAddCOMFactory(_COM_IGPXPropertyHandler_impl, user=False) and \
       COMRegistration.RegistryAddPropertyHandler(_COM_IGPXPropertyHandler_impl, full_details='+GPXShellExt.GPX.PropGroup;GPXShellExt.GPX.Name;GPXShellExt.GPX.Start;GPXShellExt.GPX.End;GPXShellExt.GPX.Dur;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;GPXShellExt.GPX.Wpts', preview_details='+GPXShellExt.GPX.Name;*GPXShellExt.GPX.Start;*GPXShellExt.GPX.End;*GPXShellExt.GPX.Dur;*GPXShellExt.GPX.Dist;*GPXShellExt.GPX.EGain;*GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;*GPXShellExt.GPX.Wpts', content_layout='alpha', content_mode_browse='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemNameDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', content_mode_search='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemPathDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', user=False) and \
-      COMRegistration.RegistryAddCOMFactory(_COM_IGPXPreviewHandler_impl, user=False, model='Apartment') and \
+      COMRegistration.RegistryAddCOMFactory(_COM_IGPXPreviewHandler_impl, user=False) and \
       COMRegistration.RegistryAddPreviewHandler(_COM_IGPXPreviewHandler_impl, user=False)
   else:
     r = \
