@@ -45,7 +45,12 @@ La recherche et le filtrage de traces dans l'explorateur de fichiers peuvent êt
     * map_infos: informations relatives au fournisseur et au jeu de tuiles et à la liste de matrices autorisées, ou de carte, avec indication du facteur de dézoom,
     * map_handling: paramètres de récupération des tuiles (en local ou en ligne) ou de la carte,
     * map_track_thickness: épaisseur, en pixels logiques, de la trace,
+    * map_track_color_own: application ou pas de la propre couleur de la trace,
+    * map_track_color_fallback: couleur de repli, au format RGBA normalisé, de la trace,
+    * map_background_gamma_amplitude: amplitude de la fonction de transfert gamma de l'effet d'atténuation du fond de carte,
+    * map_background_gamma_exponent: exposant de la fonction de transfert gamma de l'effet d'atténuation du fond de carte,
     * graph_line_thickness: épaisseur, en pixels logiques, du graphe,
+    * graph_line_color: couleur, au format RGBA normalisé, du graphe,
     * graph_font_size: taille, en pixels logiques, de la police du graphe,
     * graph_font_fallback: police de repli, en cas d'absence d'initialisation par le système, du graphe;
   - enregistrement:
@@ -95,7 +100,12 @@ The searching and the filtering of the tracks in the file explorer can be perfor
     * map_infos: information relating to the provider and to the set of tiles or maps and to the list of allowed matrices, or of card, with indication of the zoom-out factor,
     * map_handling: options of retrieval of the tiles (locally or online) or of the map,
     * map_track_thickness: thickness, in logical pixels, of the track,
+    * map_track_color_own: application or not of the own color of the trace,
+    * map_track_color_fallback: fallback color, in normalized RGBA format, of the track,
+    * map_background_gamma_amplitude: amplitude of the gamma transfer function of the attenuation effect of the background map,
+    * map_background_gamma_exponent: exponent of the gamma transfer function of the attenuation effect of the background map,
     * graph_line_thickness: thickness, in logical pixels, of the graph,
+    * graph_line_color: color, in normalized RGBA format, of the graph,
     * graph_font_size: size, in logical pixels, of the font of the graph,
     * graph_font_fallback: fallback font, in case of absence of initialization by the system, of the graph;
   - registration:
