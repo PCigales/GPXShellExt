@@ -649,7 +649,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
           d2d1mapdevicecontext.DrawImage(d2d1effect)
           d2d1mapdevicecontext.EndDraw()
           d2d1mapbitmap2.Release()
-        d2d1mapbitmap2.Release()
+        d2d1mapdevicecontext.SetTarget()
         with cls[pI] as self:
           if self and self.pd2d1mapdevicecontext == vd2d1mapdevicecontext:
             self.pd2d1mapdevicecontext = None
