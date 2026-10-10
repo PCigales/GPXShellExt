@@ -19,7 +19,12 @@ SETTINGS = {
   # 'map_infos': {'alias': 'OSM', 'factor': 1.5},
   # 'map_handling': {'local_pattern': r'%ProgramData%\GPXShellExt\cache', 'local_expiration': None, 'local_store': False, 'key': None, 'referer': None, 'user_agent': 'GPXShellExt', 'basic_auth': None, 'extra_headers': None, 'only_local': False},
   'map_track_thickness': 3.5,
+  'map_track_color_own': True,
+  'map_track_color_fallback': (1.0, 0.0, 0.0, 1.0),
+  'map_background_gamma_amplitude': 1.0,
+  'map_background_gamma_exponent': 1.0,
   'graph_line_thickness': 1.5,
+  'graph_line_color': (1.0, 0.0, 0.0, 1.0),
   'graph_font_size': 11.0,
   'graph_font_fallback': 'Segoe UI'
 }
@@ -512,7 +517,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
     maxh = max(max((h for shs in hs for h in shs), default=0.0), minh + 1.0)
     dh = maxh - minh
     self.graphscale = maxd, dh
-    if (d2d1trackcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1graphcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1strokestyle := d2d1devicecontext.CreateStrokeStyle('Round', 'Round', 'Round', 'Round', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1arstrokestyle := d2d1devicecontext.CreateStrokeStyle('Flat', 'Triangle', 'Flat', 'Flat', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1redbrush := d2d1devicecontext.CreateBrush((1.0, 0.0, 0.0, 1.0))) is not None and (d2d1greybrush := d2d1devicecontext.CreateBrush((0.8, 0.8, 0.8, 1.0))) is not None and (d2d1trackpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1trackgeometrysink := d2d1trackpathgeometry.Open()) is not None and (d2d1graphpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1graphgeometrysink := d2d1graphpathgeometry.Open()) is not None:
+    if (d2d1trackcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1graphcommandlist := d2d1devicecontext.CreateCommandList()) is not None and (d2d1strokestyle := d2d1devicecontext.CreateStrokeStyle('Round', 'Round', 'Round', 'Round', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1arstrokestyle := d2d1devicecontext.CreateStrokeStyle('Flat', 'Triangle', 'Flat', 'Flat', 1.0, 'Solid', 0.0, 'Fixed')) is not None and (d2d1trackbrush := d2d1devicecontext.CreateBrush((SETTINGS['map_track_color_own'] and track.Color) or SETTINGS['map_track_color_fallback'])) is not None and (d2d1greybrush := d2d1devicecontext.CreateBrush((0.8, 0.8, 0.8, 1.0))) is not None and (d2d1graphbrush := d2d1devicecontext.CreateBrush(SETTINGS['graph_line_color'])) is not None and (d2d1trackpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1trackgeometrysink := d2d1trackpathgeometry.Open()) is not None and (d2d1graphpathgeometry := d2d1devicecontext.CreatePathGeometry()) is not None and (d2d1graphgeometrysink := d2d1graphpathgeometry.Open()) is not None:
       d2d1devicecontext.SetTarget(d2d1trackcommandlist)
       d2d1devicecontext.BeginDraw()
       l_t = SETTINGS['map_track_thickness']
@@ -530,17 +535,17 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
         d2d1trackgeometrysink.AddLines(points)
         d2d1trackgeometrysink.EndFigure()
         for x, y, tx, ty in sarws:
-          d2d1devicecontext.DrawLine(((x := x - minx) - tx, (y := maxy - y) +  ty), (x, y), d2d1redbrush, ar_t, d2d1arstrokestyle)
+          d2d1devicecontext.DrawLine(((x := x - minx) - tx, (y := maxy - y) +  ty), (x, y), d2d1trackbrush, ar_t, d2d1arstrokestyle)
       d2d1trackgeometrysink.Close()
-      d2d1devicecontext.DrawGeometry(d2d1trackpathgeometry, d2d1redbrush, l_t, d2d1strokestyle)
+      d2d1devicecontext.DrawGeometry(d2d1trackpathgeometry, d2d1trackbrush, l_t, d2d1strokestyle)
       for x, y in zip(xwpts, ywpts):
         d2d1devicecontext.DrawLine(((x := x - minx), (y := maxy - y)), (x, y), d2d1greybrush, p_t, d2d1strokestyle)
-        d2d1devicecontext.DrawLine((x, y), (x, y), d2d1redbrush, p_t * 0.7, d2d1strokestyle)
+        d2d1devicecontext.DrawLine((x, y), (x, y), d2d1trackbrush, p_t * 0.7, d2d1strokestyle)
       if p0 is not None:
         d2d1devicecontext.DrawLine(p0, p0, d2d1greybrush, p_t * 1.3, d2d1strokestyle)
-        d2d1devicecontext.DrawLine(p0, p0, d2d1redbrush, p_t, d2d1strokestyle)
+        d2d1devicecontext.DrawLine(p0, p0, d2d1trackbrush, p_t, d2d1strokestyle)
         d2d1devicecontext.DrawLine(p0, p0, d2d1greybrush, p_t * 0.7, d2d1strokestyle)
-        d2d1devicecontext.DrawLine(p0, p0, d2d1redbrush, p_t * 0.3, d2d1strokestyle)
+        d2d1devicecontext.DrawLine(p0, p0, d2d1trackbrush, p_t * 0.3, d2d1strokestyle)
       d2d1devicecontext.EndDraw()
       d2d1devicecontext.SetTarget(d2d1graphcommandlist)
       d2d1devicecontext.BeginDraw()
@@ -553,7 +558,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
         d2d1graphgeometrysink.AddLines(points)
         d2d1graphgeometrysink.EndFigure()
       d2d1graphgeometrysink.Close()
-      d2d1devicecontext.DrawGeometry(d2d1graphpathgeometry, d2d1redbrush, g_t, d2d1strokestyle)
+      d2d1devicecontext.DrawGeometry(d2d1graphpathgeometry, d2d1graphbrush, g_t, d2d1strokestyle)
       d2d1devicecontext.EndDraw()
       if (dwfactory := IDWriteFactory()) is not None and (ptextformat := self.ptextformat or _IUtil.Detach(dwfactory.CreateTextFormat(SETTINGS['graph_font_fallback'], size=SETTINGS['graph_font_size']))) and (dwlmindtextlayout := dwfactory.CreateTextLayout('0', ptextformat, 1e9, 1e9)) is not None and (lmindmetrics := dwlmindtextlayout.GetMetrics()) is not None and (dwlmaxdtextlayout := dwfactory.CreateTextLayout('%s %s' % (('%.1f' % (maxd / 1000)).rstrip('0').rstrip('.'), LSTRINGS['km']), ptextformat, 1e9, 1e9)) is not None and (lmaxdmetrics := dwlmaxdtextlayout.GetMetrics()) is not None and (dwlminhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (minh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lminhmetrics := dwlminhtextlayout.GetMetrics()) is not None and (dwlmaxhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (maxh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lmaxhmetrics := dwlmaxhtextlayout.GetMetrics()) is not None:
         dwlmindtextlayout.SetTextAlignment('Center')
@@ -590,7 +595,19 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
       vd2d1mapdevicecontext = d2d1mapdevicecontext.pI.value
       def th():
         Initialize()
-        d2d1mapdevicecontext.SetTarget(d2d1mapbitmap)
+        famp = SETTINGS['map_background_gamma_amplitude']
+        fexp = SETTINGS['map_background_gamma_exponent']
+        if (d2d1mapbitmap2 := d2d1mapdevicecontext.CreateTargetBitmap(width=bwidth, height=bheight, dpiX=dpi, dpiY=dpi, drawable=True) if (famp != 1.0 or fexp != 1.0) and (d2d1effect := d2d1mapdevicecontext.CreateEffect('GammaTransfer')) is not None else None) is not None:
+          d2d1effect['RedAmplitude'](famp)
+          d2d1effect['RedOffset'](1.0 - famp)
+          d2d1effect['RedExponent'](fexp)
+          d2d1effect['GreenAmplitude'](famp)
+          d2d1effect['GreenOffset'](1.0 - famp)
+          d2d1effect['GreenExponent'](fexp)
+          d2d1effect['BlueAmplitude'](famp)
+          d2d1effect['BlueOffset'](1.0 - famp)
+          d2d1effect['BlueExponent'](fexp)
+        d2d1mapdevicecontext.SetTarget(d2d1mapbitmap2 or d2d1mapbitmap)
         d2d1mapdevicecontext.BeginDraw()
         d2d1mapdevicecontext.SetAntialiasMode('Aliased')
         d2d1mapdevicecontext.Clear((0.0, 0.5, 0.0, 1.0))
@@ -625,7 +642,14 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
               pstream.Release()
         if i != 0:
           d2d1mapdevicecontext.EndDraw()
-        d2d1mapdevicecontext.SetTarget()
+        if d2d1mapbitmap2 is not None:
+          d2d1effect.SetInput(0, d2d1mapbitmap2)
+          d2d1mapdevicecontext.SetTarget(d2d1mapbitmap)
+          d2d1mapdevicecontext.BeginDraw()
+          d2d1mapdevicecontext.DrawImage(d2d1effect)
+          d2d1mapdevicecontext.EndDraw()
+          d2d1mapdevicecontext.SetTarget()
+          d2d1mapbitmap2.Release()
         with cls[pI] as self:
           if self and self.pd2d1mapdevicecontext == vd2d1mapdevicecontext:
             self.pd2d1mapdevicecontext = None
