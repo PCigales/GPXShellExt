@@ -130,6 +130,13 @@ except:
   pass
 
 
+class DLGCHOOSECOLOR(_BDSStruct, ctypes.Structure):
+  _fields_ = [('lStructSize', wintypes.DWORD), ('hwndOwner', wintypes.HWND), ('hInstance', wintypes.HWND), ('rgbResult', wintypes.COLORREF), ('lpCustColors', wintypes.LPCOLORREF), ('Flags', wintypes.DWORD), ('lCustData', wintypes.LPARAM), ('lpfnHook', wintypes.LPVOID), ('lpTemplateName', wintypes.LPCWSTR)]
+DLGPCHOOSECOLOR = ctypes.POINTER(DLGCHOOSECOLOR)
+
+comdlg32.ChooseColorW.restype = wintypes.BOOLE
+comdlg32.ChooseColorW.argtypes = (DLGPCHOOSECOLOR,)
+
 class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
   Title = 'GPX'
   @classmethod
@@ -141,6 +148,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
     tconts = []
     tnames = []
     tdescs = []
+    tcols = []
     twpts = None
     tstarts = []
     tends = []
@@ -158,6 +166,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         tconts.append(None)
         tnames.append(None)
         tdescs.append(None)
+        tcols.append(None)
         tstarts.append(None)
         tends.append(None)
         tdurs.append(None)
@@ -169,6 +178,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         tconts.append(ctypes.create_unicode_buffer('%d %s%s, %d %s%s' %(track.NSegs, LSTRINGS['segment'], ('s' if track.NSegs >= 2 else ''), track.NPts, LSTRINGS['point'], ('s' if track.NPts >= 2 else ''))))
         tnames.append(ctypes.create_unicode_buffer(track.Name))
         tdescs.append(ctypes.create_unicode_buffer(track.Desc))
+        tcols.append(ctypes.create_unicode_buffer(track.Color or '000000'))
         tstarts.append(ctypes.create_unicode_buffer('' if track.Start is None else datetime.datetime.fromtimestamp(track.Start).strftime('%x %X')))
         tends.append(ctypes.create_unicode_buffer('' if track.End is None else datetime.datetime.fromtimestamp(track.End).strftime('%x %X')))
         tdurs.append(ctypes.create_unicode_buffer('' if track.Dur is None else '%d%s%02d%s%02.0f%s' % (track.Dur // 3600, LSTRINGS['h'], track.Dur % 3600 // 60, LSTRINGS['mn'], track.Dur % 60, LSTRINGS['s'])))
@@ -182,39 +192,43 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
       trk += 1
     del trck.Track
     tr = '%s %%-%dd' % (LSTRINGS['Track'], len(str(max(0, nbtrk - 1))))
-    ts = tuple(map(ctypes.create_unicode_buffer, ('GPX', 'MS Shell Dlg', ('%s:' % LSTRINGS['Path']), file, tr % 0, ('%s:' % LSTRINGS['Name']), ('%s:' % LSTRINGS['Description']), ('%s:' % LSTRINGS['Start']), ('%s:' % LSTRINGS['End']), ('%s:' % LSTRINGS['Duration']), ('%s:' % LSTRINGS['Distance']), ('%s:' % LSTRINGS['EleGain']), ('%s:' % LSTRINGS['AltGain']), ('%s:' % LSTRINGS['Waypoints']))))
-    b = ctypes.create_string_buffer(cls._header_size(ts[0], ts[1]) + cls._text_item_size(ts[2]) + cls._text_item_size(ts[3]) + (nbtrk + 1) * cls._text_item_size() + nbtrk * cls._text_item_size(ts[4]) + nbvtrk * sum(cls._text_item_size(ts[i]) for i in range(5, 13)) + sum(cls._text_item_size(t) for ts in (tconts, tnames, tdescs, tstarts, tends, tdurs, tdists, tegains, tagains) for t in ts if t is not None) + (cls._text_item_size(ts[13]) + cls._text_item_size(twpts) if twpts is not None else 0))
-    dt, o = cls._header(b, 'Child | Visible | Caption | VScroll | ModalFrame | SetFont', 0, 2 * nbtrk + 17 * nbvtrk + (5 if twpts else 3), 0, 0, 150, 250, ts[0], (9, ts[1]))
-    dit, o = cls._text_item(b, o, 'Child | Visible | TabStop', 0, 5, 2, 30, 10, 0xffff, 0x0082, ts[2])
-    dit, o = cls._text_item(b, o, 'Child | Visible | EditAutoHScroll | EditReadOnly', 0, 40, 2, 94, 10, 10, 0x0081, ts[3])
+    ts = tuple(map(ctypes.create_unicode_buffer, ('GPX', 'MS Shell Dlg', ('%s:' % LSTRINGS['Path']), file, tr % 0, ('%s:' % LSTRINGS['Name']), ('%s:' % LSTRINGS['Description']), ('%s:' % LSTRINGS['Start']), ('%s:' % LSTRINGS['End']), ('%s:' % LSTRINGS['Duration']), ('%s:' % LSTRINGS['Distance']), ('%s:' % LSTRINGS['EleGain']), ('%s:' % LSTRINGS['AltGain']), '██', ('%s:' % LSTRINGS['Waypoints']))))
+    b = ctypes.create_string_buffer(cls._header_size(ts[0], ts[1]) + cls._text_item_size(ts[2]) + cls._text_item_size(ts[3]) + (nbtrk + 1) * cls._text_item_size() + nbtrk * cls._text_item_size(ts[4]) + nbvtrk * sum(cls._text_item_size(ts[i]) for i in range(5, 14)) + sum(cls._text_item_size(t) for ts in (tconts, tnames, tdescs, tcols, tstarts, tends, tdurs, tdists, tegains, tagains) for t in ts if t is not None) + (cls._text_item_size(ts[14]) + cls._text_item_size(twpts) if twpts is not None else 0))
+    dt, o = cls._header(b, 'Child | Visible | Caption | VScroll | ModalFrame | SetFont', 0, 2 * nbtrk + 19 * nbvtrk + (5 if twpts else 3), 0, 0, 150, 250, ts[0], (9, ts[1]))
+    dit, o = cls._text_item(b, o, 'Child | Visible | TabStop', 0, 5, 2, 30, 10, 10, 0x0082, ts[2])
+    dit, o = cls._text_item(b, o, 'Child | Visible | EditAutoHScroll | EditReadOnly', 0, 40, 2, 94, 10, 11, 0x0081, ts[3])
     y = 17
+    ind = 0
     for i in range(nbtrk):
       dit, o = cls._text_item(b, o, 'Child | Visible | StaticEtchedHorz', 0, 0, y, 150, 1, 0xffff, 0x0082)
-      dit, o = cls._text_item(b, o, 'Child | Visible', 0, 5, (y := y + 3), 45, 10, 0xffff, 0x0082, ctypes.create_unicode_buffer(tr % i))
+      ind += 20
+      dit, o = cls._text_item(b, o, 'Child | Visible', 0, 5, (y := y + 3), 45, 10, ind, 0x0082, ctypes.create_unicode_buffer(tr % i))
       if tconts[i] is not None:
-        dit, o = cls._text_item(b, o, 'Child | Visible | EditRight | EditAutoHScroll | EditReadOnly', 0, 60, y, 74, 10, 10 * (i + 1) + 1, 0x0081, tconts[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, 0xffff, 0x0082, ts[5])
-        dit, o = cls._text_item(b, o, 'Child | Visible | EditAutoHScroll | TabStop%s' % (' | EditReadOnly' if readonly else ''), 0, 60, y, 74, 10, 10 * (i + 1) + 2, 0x0081, tnames[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, 0xffff, 0x0082, ts[7])
-        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, 10 * (i + 1) + 4, 0x0081, tstarts[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, 0xffff, 0x0082, ts[8])
-        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 124, y, 10, 10, 10 * (i + 1) + 5, 0x0081, tends[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, 0xffff, 0x0082, ts[9])
-        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, 10 * (i + 1) + 6, 0x0081, tdurs[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, 0xffff, 0x0082, ts[10])
-        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 124, y, 10, 10, 10 * (i + 1) + 7, 0x0081, tdists[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, 0xffff, 0x0082, ts[11])
-        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, 10 * (i + 1) + 8, 0x0081, tegains[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, 0xffff, 0x0082, ts[12])
-        dit, o = cls._text_item(b, o, 'Child | Visible | EditAutoHScroll | TabStop | EditReadOnly', 0, 124, y, 10, 10, 10 * (i + 1) + 9, 0x0081, tagains[i])
-        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, 0xffff, 0x0082, ts[6])
-        dit, o = cls._text_item(b, o, 'Child | Visible | VScroll | EditAutoVScroll | EditWantReturn | EditMultiline | TabStop%s' % (' | EditReadOnly' if readonly else ''), 0, 60, y, 74, 32, 10 * (i + 1) + 3, 0x0081, tdescs[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible%s' % ('' if readonly else ' | StaticNotify'), 0, 51, y, 8, 10, ind + 1, 0x0082, ts[13])
+        dit, o = cls._text_item(b, o, 'Child%s' % (' | EditReadOnly' if readonly else ''), 0, 59, y, 0, 0, ind + 10, 0x0081, tcols[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible | EditRight | EditAutoHScroll | EditReadOnly', 0, 60, y, 74, 10, ind + 11, 0x0081, tconts[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, ind + 2, 0x0082, ts[5])
+        dit, o = cls._text_item(b, o, 'Child | Visible | EditAutoHScroll | TabStop%s' % (' | EditReadOnly' if readonly else ''), 0, 60, y, 74, 10, ind + 12, 0x0081, tnames[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, ind + 4, 0x0082, ts[7])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, ind + 14, 0x0081, tstarts[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, ind + 5, 0x0082, ts[8])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 124, y, 10, 10, ind + 15, 0x0081, tends[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, ind + 6, 0x0082, ts[9])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, ind + 16, 0x0081, tdurs[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, ind + 7, 0x0082, ts[10])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 124, y, 10, 10, ind + 17, 0x0081, tdists[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, ind + 8, 0x0082, ts[11])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 60, y, 10, 10, ind + 18, 0x0081, tegains[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 74, y, 45, 10, ind + 9, 0x0082, ts[12])
+        dit, o = cls._text_item(b, o, 'Child | Visible | TabStop | EditReadOnly', 0, 124, y, 10, 10, ind + 19, 0x0081, tagains[i])
+        dit, o = cls._text_item(b, o, 'Child | Visible', 0, 10, (y := y + 10), 45, 10, ind + 3, 0x0082, ts[6])
+        dit, o = cls._text_item(b, o, 'Child | Visible | VScroll | EditAutoVScroll | EditWantReturn | EditMultiline | TabStop%s' % (' | EditReadOnly' if readonly else ''), 0, 60, y, 74, 32, ind + 13, 0x0081, tdescs[i])
         y += 22
       y += 12
     dit, o = cls._text_item(b, o, 'Child | Visible | StaticEtchedHorz', 0, 0, y, 150, 1, 0xffff, 0x0082)
     if twpts is not None:
-      dit, o = cls._text_item(b, o, 'Child | Visible', 0, 5, (y := y + 3), 75, 10, 0xffff, 0x0082, ts[13])
-      dit, o = cls._text_item(b, o, 'Child | Visible | VScroll | EditAutoVScroll | EditMultiline | EditReadOnly', 0, 10, (y := y + 10), 124, 32, 10 * (i + 3), 0x0081, twpts)
+      dit, o = cls._text_item(b, o, 'Child | Visible', 0, 5, (y := y + 3), 75, 10, ind + 20, 0x0082, ts[14])
+      dit, o = cls._text_item(b, o, 'Child | Visible | VScroll | EditAutoVScroll | EditMultiline | EditReadOnly', 0, 10, (y := y + 10), 124, 32, ind + 22, 0x0081, twpts)
     return DLGPTEMPLATE(dt)
   @classmethod
   def _DlgProc(cls, hWnd, uMsg, wParam, lParam):
@@ -224,19 +238,19 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
       if (rd0 := d.MapDialogRect((0, 0, 150, 250))) is not None and (r := _SPSUtil.GetTabDisplayRect(d)) is not None and d.Move((r.left, r.top, r.right - r.left, r.bottom - r.top), False) and (rd := d.Rect) is not None:
         wg = rd.right - rd.left + rd0.left - rd0.right
         c = None
-        while (c := d.FindChildWindow(c, 'Static', '')):
-          if (r := c.Rect) is not None:
-            c.Move((0, r.top - rd.top, r.right - r.left + wg, r.bottom - r.top), False)
-        for n in (('%s:' % LSTRINGS['End']), ('%s:' % LSTRINGS['Distance']), ('%s:' % LSTRINGS['AltGain'])):
-          c = None
-          while (c := d.FindChildWindow(c, 'Static', n)):
-            if (r := c.Rect) is not None:
+        while (c := d.FindChildWindow(c, 'Static')):
+          if (i := d.GetItemID(c)) and (r := c.Rect) is not None:
+            if i == 0xffff:
+              c.Move((0, r.top - rd.top, r.right - r.left + wg, r.bottom - r.top), False)
+            elif i % 10 >= 5 and i % 2:
               c.Move((r.left - rd.left + wg // 2, r.top - rd.top, r.right - r.left, r.bottom - r.top), False)
         c = None
         while (c := d.FindChildWindow(c, 'Edit')):
           if (i := d.GetItemID(c)) and (r := c.Rect) is not None:
             i %= 10
-            if i <= 3:
+            if i == 0:
+              pass
+            elif i <= 3:
               c.Move((r.left - rd.left, r.top - rd.top, r.right - r.left + wg, r.bottom - r.top), False)
             elif i % 2:
               c.Move((r.left - rd.left + wg // 2, r.top - rd.top, r.right - r.left + wg // 2, r.bottom - r.top), False)
@@ -244,6 +258,27 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
               c.Move((r.left - rd.left, r.top - rd.top, r.right - r.left + wg // 2, r.bottom - r.top), False)
         d.Update()
       r = 1
+    elif uMsg == 312:
+      d = DLGHWND(hWnd)
+      if (i := d.GetItemID(lParam)) and i % 20 == 1 and (c := d.GetItemText(i + 9)) is not None:
+        b = Window.DefWindowProc(hWnd, uMsg, wParam, lParam)
+        DialogWindow.SetBkMode(wParam, 'Opaque')
+        c = int(c, 16)
+        DialogWindow.SetTextColor(wParam, c)
+        DialogWindow.SetBkColor(wParam, c)
+        return b
+    elif uMsg == 273:
+      d = DLGHWND(hWnd)
+      if lParam and wParam >> 16 == 0 and (i := wParam & 0xffff) % 20 == 1 and (cc := d.GetItem(i + 9)) and (c := d.GetItemText(cc)) is not None:
+        c = DLGCHOOSECOLOR(hWnd, None, int(c, 16), (wintypes.COLORREF * 16)(int(c, 16),), 0x103)
+        r = comdlg32.ChooseColorW(c).value
+        if not d.IsExisting:
+          return 1
+        if r and (d.SetItemText(cc, '%06x' % c.rgbResult)):
+          DialogWindow.SetModify(cc, True)
+          d.SendMessage(273, 0x2000009 + i, cc.hwnd)
+          Window.InvalidateRect(lParam, None, True)
+        r = 1
     elif uMsg == 78:
       if DLGNMHDR.from_address(lParam).code == 4294967094:
         d = DLGHWND(hWnd)
@@ -251,12 +286,15 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         track = None
         pstream = None
         pdeststream = None
-        file = d.GetItemText(10)
+        file = d.GetItemText(11)
         r = 0x80004005
         i = 1
-        while (cn := d.GetItem(i * 10 + 2)) and (cd := d.GetItem(i * 10 + 3)):
-          if d.GetItemModify(cn) or d.GetItemModify(cd):
-            if (vn := d.GetItemText(cn)) is None or (vd := d.GetItemText(cd)) is None:
+        while (cn := d.GetItem(i * 20 + 12)) and (cd := d.GetItem(i * 20 + 13)) and (cc := d.GetItem(i * 20 + 10)):
+          mn = d.GetItemModify(cn)
+          md = d.GetItemModify(cd)
+          mc = d.GetItemModify(cc)
+          if mn or md or mc:
+            if (vn := mn and d.GetItemText(cn)) is None or (vd := md and d.GetItemText(cd)) is None or (vc := mc and d.GetItemText(cc)) is None:
               break
             track = GPXTweaker.WGS84PropertiesTrack()
             if trck is None:
@@ -264,7 +302,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
                 r = 0x80030005
                 break
               trck = track
-            if not track.LoadGPX(content, i - 1, trck, 'u') or not track.UpdateGPX(vn, vd):
+            if not track.LoadGPX(content, i - 1, trck, 'u') or not track.UpdateGPX(vn, vd, vc):
               break
           i += 1
         else:
@@ -286,6 +324,8 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
             b = b.value
           else:
             b = DialogWindow.MessageBox(d, '%s.\r\n\r\n%s: %s\r\n\r\n%s %s\r\n\r\n%s ?' % (LSTRINGS['Errmsg'], LSTRINGS['Path'], file, LSTRINGS['Error'], str(WError(r))[1:-1], LSTRINGS['Retry']), LSTRINGS['Errtitle'], 0x10004)
+          if not d.IsExisting:
+            return 1
           if b == 7:
             d.ReturnValue = 0
           else:
