@@ -850,7 +850,7 @@ class _COM_IGPXQueryTipInfo(_COM_IQueryTipInfo):
         if slow:
           p = []
           if track.Dist is not None:
-            p.append('%s %s' % (('%.1f' % track.Dist_r).rstrip('0').rstrip('.'), LSTRINGS['km']))
+            p.append('%s\u2009%s' % (('%.1f' % track.Dist_r).rstrip('0').rstrip('.'), LSTRINGS['km']))
           if track.Dur is not None:
             p.append('%d\u2009%s\u2009%02d\u2009%s\u2009%02.0f\u2009%s' % (track.Dur // 3600, LSTRINGS['h'], track.Dur % 3600 // 60, LSTRINGS['mn'], track.Dur % 60, LSTRINGS['s']))
           if track.AGain is not None:
@@ -866,7 +866,7 @@ class _COM_IGPXQueryTipInfo(_COM_IQueryTipInfo):
       trk += 1
     del trck.Track
     self.tip = '\r\n'.join(tip)
-    return 1 if slow else 0
+    return 0 if slow else 1
 
 class _COM_IGPXTipInfoHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializeTipInfoWithStream, _COM_IGPXQueryTipInfo)):
   CLSID = True
