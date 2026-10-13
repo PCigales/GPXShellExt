@@ -3,8 +3,10 @@
 # This program is licensed under the GNU GPLv3 copyleft license (see https://www.gnu.org/licenses)
 
 from wic import *
-from wic import _IUtil, _COMMeta, _WShUtil, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl
+from wic import _IUtil, _COMMeta, _WShUtil, _BDSStruct, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl, _COM_IInitializeTipInfoWithStream, _COM_IQueryTipInfo, _COM_ITipInfoHandler_impl
 import GPXTweaker
+
+comdlg32 = ctypes.WinDLL('comdlg32', use_last_error=True)
 
 SETTINGS = {
   'smooth_range': 10.0,
@@ -179,12 +181,12 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         tnames.append(ctypes.create_unicode_buffer(track.Name))
         tdescs.append(ctypes.create_unicode_buffer(track.Desc))
         tcols.append(ctypes.create_unicode_buffer(track.Color or '000000'))
-        tstarts.append(ctypes.create_unicode_buffer('' if track.Start is None else datetime.datetime.fromtimestamp(track.Start).strftime('%x %X')))
-        tends.append(ctypes.create_unicode_buffer('' if track.End is None else datetime.datetime.fromtimestamp(track.End).strftime('%x %X')))
-        tdurs.append(ctypes.create_unicode_buffer('' if track.Dur is None else '%d%s%02d%s%02.0f%s' % (track.Dur // 3600, LSTRINGS['h'], track.Dur % 3600 // 60, LSTRINGS['mn'], track.Dur % 60, LSTRINGS['s'])))
-        tdists.append(ctypes.create_unicode_buffer('' if track.Dist is None else '%s %s' % (('%.2f' % track.Dist_r).rstrip('0').rstrip('.'), LSTRINGS['km'])))
-        tegains.append(ctypes.create_unicode_buffer('' if track.EGain is None else '%.0f%s' % (track.EGain_r, LSTRINGS['m'])))
-        tagains.append(ctypes.create_unicode_buffer('' if track.AGain is None else '%.0f%s' % (track.AGain_r, LSTRINGS['m'])))
+        tstarts.append(ctypes.create_unicode_buffer('' if track.Start is None else datetime.datetime.fromtimestamp(track.Start).strftime('%x\u2009%X')))
+        tends.append(ctypes.create_unicode_buffer('' if track.End is None else datetime.datetime.fromtimestamp(track.End).strftime('%x\u2009%X')))
+        tdurs.append(ctypes.create_unicode_buffer('' if track.Dur is None else '%d\u2009%s\u2009%02d\u2009%s\u2009%02.0f\u2009%s' % (track.Dur // 3600, LSTRINGS['h'], track.Dur % 3600 // 60, LSTRINGS['mn'], track.Dur % 60, LSTRINGS['s'])))
+        tdists.append(ctypes.create_unicode_buffer('' if track.Dist is None else '%s\u2009%s' % (('%.2f' % track.Dist_r).rstrip('0').rstrip('.'), LSTRINGS['km'])))
+        tegains.append(ctypes.create_unicode_buffer('' if track.EGain is None else '%.0f\u2009%s' % (track.EGain_r, LSTRINGS['m'])))
+        tagains.append(ctypes.create_unicode_buffer('' if track.AGain is None else '%.0f\u2009%s' % (track.AGain_r, LSTRINGS['m'])))
       if nbtrk == 1:
         nbtrk = track.NbGPXTrks
         if track.Wpts:
@@ -274,7 +276,7 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         r = comdlg32.ChooseColorW(c).value
         if not d.IsExisting:
           return 1
-        if r and (d.SetItemText(cc, '%06x' % c.rgbResult)):
+        if r and (d.SetItemText(cc, '%06x' % (c.rgbResult & 0xffffff))):
           DialogWindow.SetModify(cc, True)
           d.SendMessage(273, 0x2000009 + i, cc.hwnd)
           Window.InvalidateRect(lParam, None, True)
@@ -600,7 +602,7 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
       d2d1graphgeometrysink.Close()
       d2d1devicecontext.DrawGeometry(d2d1graphpathgeometry, d2d1graphbrush, g_t, d2d1strokestyle)
       d2d1devicecontext.EndDraw()
-      if (dwfactory := IDWriteFactory()) is not None and (ptextformat := self.ptextformat or _IUtil.Detach(dwfactory.CreateTextFormat(SETTINGS['graph_font_fallback'], size=SETTINGS['graph_font_size']))) and (dwlmindtextlayout := dwfactory.CreateTextLayout('0', ptextformat, 1e9, 1e9)) is not None and (lmindmetrics := dwlmindtextlayout.GetMetrics()) is not None and (dwlmaxdtextlayout := dwfactory.CreateTextLayout('%s %s' % (('%.1f' % (maxd / 1000)).rstrip('0').rstrip('.'), LSTRINGS['km']), ptextformat, 1e9, 1e9)) is not None and (lmaxdmetrics := dwlmaxdtextlayout.GetMetrics()) is not None and (dwlminhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (minh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lminhmetrics := dwlminhtextlayout.GetMetrics()) is not None and (dwlmaxhtextlayout := dwfactory.CreateTextLayout('%.0f %s' % (maxh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lmaxhmetrics := dwlmaxhtextlayout.GetMetrics()) is not None:
+      if (dwfactory := IDWriteFactory()) is not None and (ptextformat := self.ptextformat or _IUtil.Detach(dwfactory.CreateTextFormat(SETTINGS['graph_font_fallback'], size=SETTINGS['graph_font_size']))) and (dwlmindtextlayout := dwfactory.CreateTextLayout('0', ptextformat, 1e9, 1e9)) is not None and (lmindmetrics := dwlmindtextlayout.GetMetrics()) is not None and (dwlmaxdtextlayout := dwfactory.CreateTextLayout('%s\u2009%s' % (('%.1f' % (maxd / 1000)).rstrip('0').rstrip('.'), LSTRINGS['km']), ptextformat, 1e9, 1e9)) is not None and (lmaxdmetrics := dwlmaxdtextlayout.GetMetrics()) is not None and (dwlminhtextlayout := dwfactory.CreateTextLayout('%.0f\u2009%s' % (minh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lminhmetrics := dwlminhtextlayout.GetMetrics()) is not None and (dwlmaxhtextlayout := dwfactory.CreateTextLayout('%.0f\u2009%s' % (maxh, LSTRINGS['m']), ptextformat, 1e9, 1e9)) is not None and (lmaxhmetrics := dwlmaxhtextlayout.GetMetrics()) is not None:
         dwlmindtextlayout.SetTextAlignment('Center')
         dwlmindtextlayout.SetParagraphAlignment('Near')
         dwlmaxdtextlayout.SetTextAlignment('Center')
@@ -820,6 +822,60 @@ class _COM_IGPXPreviewHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInit
 _COM_IGPXInitializePreviewHandlerWithStream._impl = _COM_IGPXPreviewHandlerWithFrame._impl = _COM_IGPXPreviewHandlerOleWindow._impl = _COM_IGPXPreviewHandlerVisuals._impl = _COM_IGPXPreviewHandler._impl = _COM_IGPXPreviewHandler_impl
 
 
+class _COM_IGPXInitializeTipInfoWithStream(_COM_IInitializeTipInfoWithStream):
+  pass
+
+class _COM_IGPXQueryTipInfo(_COM_IQueryTipInfo):
+  @classmethod
+  def LazyLoad(cls, self, slow=False):
+    if not slow and self.tip:
+      return 1
+    pstream = self.pstream
+    if pstream.Seek(0, 0) is None or (content := pstream.GetContent()) is None:
+      return 0x80030005
+    nbtrk = 1
+    trk = 0
+    trck = None
+    tip = []
+    while trk < nbtrk:
+      track = GPXTweaker.WGS84PropertiesTrack()
+      trck = trck or track
+      if not track.LoadGPX(content, trk, trck, 'f' if slow else 's'):
+        if trck.Wpts is None:
+          return 0x80004005
+      else:
+        if nbtrk == 1:
+          nbtrk = track.NbGPXTrks
+        tip.append(track.Name if nbtrk == 1 else ('• %s %d: %s' % (LSTRINGS['Track'], trk, track.Name)))
+        if slow:
+          p = []
+          if track.Dist is not None:
+            p.append('%s %s' % (('%.1f' % track.Dist_r).rstrip('0').rstrip('.'), LSTRINGS['km']))
+          if track.Dur is not None:
+            p.append('%d\u2009%s\u2009%02d\u2009%s\u2009%02.0f\u2009%s' % (track.Dur // 3600, LSTRINGS['h'], track.Dur % 3600 // 60, LSTRINGS['mn'], track.Dur % 60, LSTRINGS['s']))
+          if track.AGain is not None:
+            p.append('%.0f\u2009%s' % (track.AGain_r, LSTRINGS['m']))
+          elif track.EGain is not None:
+            p.append('%.0f\u2009%s' % (track.EGain_r, LSTRINGS['m']))
+          if (ts := track.Start) is not None and (te := track.End) is not None:
+            ts = datetime.datetime.fromtimestamp(track.Start).strftime('%x\u2009%X')
+            te = datetime.datetime.fromtimestamp(track.End).strftime('%x\u2009%X')
+            p.append('%s\u2009-\u2009%s' % (ts, (tes[1] if ts.split('\u2009')[0] == (tes := te.split('\u2009'))[0] else te)))
+          if p:
+            tip.append(' | '.join(p) if nbtrk == 1 else ('   %s' % ' | '.join(p)))
+      trk += 1
+    del trck.Track
+    self.tip = '\r\n'.join(tip)
+    return 1 if slow else 0
+
+class _COM_IGPXTipInfoHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializeTipInfoWithStream, _COM_IGPXQueryTipInfo)):
+  CLSID = True
+  ThreadingModel = _COM_ITipInfoHandler_impl.ThreadingModel
+  Exts = ('.gpx',)
+  _destroy = _COM_ITipInfoHandler_impl._destroy
+_COM_IGPXInitializeTipInfoWithStream._impl = _COM_IGPXQueryTipInfo._impl = _COM_IGPXTipInfoHandler_impl
+
+
 def DllInstall(bInstall, pszCmdLine):
   if (l := len((cmdline := pszCmdLine if isinstance(pszCmdLine, str) else ctypes.wstring_at(pszCmdLine)).split('|'))) != 1:
     return ISetLastError(0x80070057)
@@ -954,9 +1010,11 @@ def DllInstall(bInstall, pszCmdLine):
       COMRegistration.RegistryAddCOMFactory(_COM_IGPXShellPropSheetExt_impl, user=False) and \
       COMRegistration.RegistryAddShellPropSheetHandler(_COM_IGPXShellPropSheetExt_impl, 'GPXShellExt', user=False) and \
       COMRegistration.RegistryAddCOMFactory(_COM_IGPXPropertyHandler_impl, user=False) and \
-      COMRegistration.RegistryAddPropertyHandler(_COM_IGPXPropertyHandler_impl, full_details='+GPXShellExt.GPX.PropGroup;GPXShellExt.GPX.Name;GPXShellExt.GPX.Start;GPXShellExt.GPX.End;GPXShellExt.GPX.Dur;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;GPXShellExt.GPX.Wpts', preview_details='+GPXShellExt.GPX.Name;*GPXShellExt.GPX.Start;*GPXShellExt.GPX.End;*GPXShellExt.GPX.Dur;*GPXShellExt.GPX.Dist;*GPXShellExt.GPX.EGain;*GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;*GPXShellExt.GPX.Wpts', content_layout='alpha', content_mode_browse='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemNameDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', content_mode_search='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemPathDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', user=False) and \
+      COMRegistration.RegistryAddPropertyHandler(_COM_IGPXPropertyHandler_impl, full_details='+GPXShellExt.GPX.PropGroup;GPXShellExt.GPX.Name;GPXShellExt.GPX.Start;GPXShellExt.GPX.End;GPXShellExt.GPX.Dur;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;GPXShellExt.GPX.Wpts', preview_details='+GPXShellExt.GPX.Name;*GPXShellExt.GPX.Start;*GPXShellExt.GPX.End;*GPXShellExt.GPX.Dur;*GPXShellExt.GPX.Dist;*GPXShellExt.GPX.EGain;*GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;*GPXShellExt.GPX.Wpts', info_tip='+GPXShellExt.GPX.Name', content_layout='alpha', content_mode_browse='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemNameDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', content_mode_search='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemPathDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', user=False) and \
       COMRegistration.RegistryAddCOMFactory(_COM_IGPXPreviewHandler_impl, user=False) and \
-      COMRegistration.RegistryAddPreviewHandler(_COM_IGPXPreviewHandler_impl, user=False)
+      COMRegistration.RegistryAddPreviewHandler(_COM_IGPXPreviewHandler_impl, user=False) and \
+      COMRegistration.RegistryAddCOMFactory(_COM_IGPXTipInfoHandler_impl, user=False) and \
+      COMRegistration.RegistryAddTipInfoHandler(_COM_IGPXTipInfoHandler_impl, user=False)
   else:
     r = \
       COMRegistration.RegistryRemovePreviewHandler(_COM_IGPXPreviewHandler_impl, user=False) and \
@@ -965,6 +1023,8 @@ def DllInstall(bInstall, pszCmdLine):
       COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXPropertyHandler_impl, user=False) and \
       COMRegistration.RegistryRemoveShellPropSheetHandler(_COM_IGPXShellPropSheetExt_impl, 'GPXShellExt', user=False) and \
       COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXShellPropSheetExt_impl, user=False) and \
+      COMRegistration.RegistryRemoveTipInfoHandler(_COM_IGPXTipInfoHandler_impl, user=False) and \
+      COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXTipInfoHandler_impl, user=False) and \
       COMRegistration.RegistryRemovePropertySchema(p)
   Uninitialize()
   return ISetLastError(0 if r else IGetLastError() or 0x8000ffff)
