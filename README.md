@@ -8,12 +8,13 @@ This program is free software: you can redistribute it and/or modify it under th
 ### ----------Français----------
 
 GPXShellExt est un module, écrit en Python (>= 3.8), implémentant plusieurs extensions pour l'explorateur de fichiers et le moteur d'indexation de Windows leur apportant la prise en charge des fichiers de traces de randonnée au format GPX:
-  - un **gestionnaire de feuille de propriétés** affichant dans un onglet personnalisé, ainsi que dans une rubrique dédiée à la fin de la page "détails" pour ce qui est de la première trace, de la fenêtre des propriétés du fichier les métadonnées (nom, description, points de cheminement, dates et heures de début et de fin) et statistiques (durée, distance lissée, dénivelés filtrés d'élévation et d'altitude) de la ou des trace(s) incluse(s), et autorisant l'édition du nom et de la description de chaque trace;
+  - un **gestionnaire de feuille de propriétés** affichant dans un onglet personnalisé, ainsi que dans une rubrique dédiée à la fin de la page "détails" pour ce qui est de la première trace, de la fenêtre des propriétés du fichier les métadonnées (nom, description, points de cheminement, dates et heures de début et de fin) et statistiques (durée, distance lissée, dénivelés filtrés d'élévation et d'altitude) de la ou des trace(s) incluse(s), et autorisant l'édition du nom, de la description et de la couleur de chaque trace;
   - un **gestionnaire de propriétés** de la première trace contenue dans le ficher, utilisable par le système pour:
     * l'indexation des métadonnées et propriétés, puis la recherche et le filtrage dans l'explorateur de fichiers au travers de requêtes AQS,
     * l'affichage des propriétés dans le panneau principal de l'explorateur de fichiers, en colonne en vue détails ou en disposition alpha à quatre lignes en vue contenu (navigation ou recherche),
     * l'affichage des propriétés et l'édition du nom et de la description dans le volet des détails de l'explorateur de fichiers;
-  - un **gestionnaire de prévisualisation** assurant l'affichage de la trace sur fond cartographique et du graphique d'élévation/altitude rapportée à la distance dans le volet de prévisualisation de l'explorateur de fichiers.
+  - un **gestionnaire de prévisualisation** assurant l'affichage de la trace sur fond cartographique et du graphique d'élévation/altitude rapportée à la distance dans le volet de prévisualisation de l'explorateur de fichiers;
+  - un **gestionnaire d'info bulle** grâce auquel le(s) nom(s) et les propriétés de la ou des trace(s) contenue(s) dans le fichier apparaissent dans une fenêtre contextuelle au survol de la souris.
 
 Le script gère également l'enregistrement et le désenregistrement des composants COM (IShellPropSheetExt, IPropertyStore et IPreviewHandler) et du fichier XML de description de propriétés personnalisées (.propdesc) dans la base de registre, ainsi que leur association à l'extension ".gpx". S'il n'est pas exécuté avec les accès suffisants à la clé HKLM, il se relance en mode administrateur en sollicitant l'élévation de privilèges via le contrôle de compte d'utilisateur. Il est nécessaire de procéder au désenregistrement puis au réenregistrement en cas de déplacement des fichiers ou de modification des réglages de cache des tuiles ou des cartes.
 
@@ -63,12 +64,13 @@ La recherche et le filtrage de traces dans l'explorateur de fichiers peuvent êt
 ### ----------English----------
 
 GPXShellExt is a module, written in Python (>= 3.8), implementing several extensions for the Windows file explorer and indexing engine bringing to them support for files of hiking tracks in GPX format:
-  - a **handler of properties sheet** displaying in a custom tab, as well as in a dedicated section at the end of the "details" page for the first trace, of the file properties window the metadata (name, description, waypoints, start and end dates and times) and statistics (duration, smoothed distance, filtered elevation and altitude gains) of the included track(s), and allowing the edition of the name and of the description of each track;
+  - a **handler of properties sheet** displaying in a custom tab, as well as in a dedicated section at the end of the "details" page for the first trace, of the file properties window the metadata (name, description, waypoints, start and end dates and times) and statistics (duration, smoothed distance, filtered elevation and altitude gains) of the included track(s), and allowing the edition of the name, the description and the color of each track;
   - a **handler of properties** of the first track contained in the file, usable by the system for:
     * the indexing of the metadata and properties, then the search and the filtering in the file explorer through AQS queries,
     * the display of the properties in the main panel of the file explorer, in column in details view or in alpha four-line layout in content view (browsing or search),
     * the display of the properties and the edition of the name and of the description in the details pane of the file explorer;
-  - a **handler of preview** ensuring the display of the track on a map and of the elevation/altitude graph relative to the distance in the preview pane of the file explorer.
+  - a **handler of preview** ensuring the display of the track on a map and of the elevation/altitude graph relative to the distance in the preview pane of the file explorer;
+  - a **handler of info tip** thanks to which the name(s) and the properties of the track(s) contained in the file appear in a popup window upon mouse hover.
 
 The script also handles the registration and the unregistration of the COM components (IShellPropSheetExt, IPropertyStore et IPreviewHandler) and of the description of custom properties XML file (.propdesc) in the registry, as well as their association with the ".gpx" extension. If it is not executed with sufficient access to the HKLM key, it restarts in administrator mode by requesting privilege escalation via user account control. It is necessary to perform the unregistering then the reregistering in case of moving files or changing the settings of the the cache of tiles or maps.
 
@@ -117,8 +119,6 @@ The searching and the filtering of the tracks in the file explorer can be perfor
 
 ### ----------Illustrations----------
 
-<img width="472" height="509" src="https://github.com/user-attachments/assets/cfcff881-8743-48bc-96ec-dd1f0775e995" />
-<img width="618" height="553" src="https://github.com/user-attachments/assets/6694e70a-7077-47b6-81a5-18bac54fea2a" />
-<img width="1839" height="852" src="https://github.com/user-attachments/assets/a49020e9-b749-443f-a176-b08603413e58" />
-
-
+<img width="472" height="509" src="https://github.com/user-attachments/assets/d3dea6a5-20c2-4e5a-9c16-d15d674829a0" />
+<img width="728" height="446" src="https://github.com/user-attachments/assets/f903f6b2-da8e-4a90-a8c3-117b78b4e578" />
+<img width="1784" height="727" src="https://github.com/user-attachments/assets/dd74756a-abdd-4383-b2c7-20ee30232d1f" />
