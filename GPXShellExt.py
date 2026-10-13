@@ -3,7 +3,7 @@
 # This program is licensed under the GNU GPLv3 copyleft license (see https://www.gnu.org/licenses)
 
 from wic import *
-from wic import _IUtil, _COMMeta, _WShUtil, _BDSStruct, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl, _COM_IInitializeTipInfoWithStream, _COM_IQueryTipInfo, _COM_ITipInfoHandler_impl
+from wic import _IUtil, _COMMeta, _WShUtil, _BDSStruct, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl, _COM_IInitializeInfoTipWithStream, _COM_IQueryInfoTip, _COM_IInfoTipHandler_impl
 import GPXTweaker
 
 comdlg32 = ctypes.WinDLL('comdlg32', use_last_error=True)
@@ -822,10 +822,10 @@ class _COM_IGPXPreviewHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInit
 _COM_IGPXInitializePreviewHandlerWithStream._impl = _COM_IGPXPreviewHandlerWithFrame._impl = _COM_IGPXPreviewHandlerOleWindow._impl = _COM_IGPXPreviewHandlerVisuals._impl = _COM_IGPXPreviewHandler._impl = _COM_IGPXPreviewHandler_impl
 
 
-class _COM_IGPXInitializeTipInfoWithStream(_COM_IInitializeTipInfoWithStream):
+class _COM_IGPXInitializeInfoTipWithStream(_COM_IInitializeInfoTipWithStream):
   pass
 
-class _COM_IGPXQueryTipInfo(_COM_IQueryTipInfo):
+class _COM_IGPXQueryInfoTip(_COM_IQueryInfoTip):
   @classmethod
   def LazyLoad(cls, self, slow=False):
     if not slow and self.tip:
@@ -868,12 +868,12 @@ class _COM_IGPXQueryTipInfo(_COM_IQueryTipInfo):
     self.tip = '\r\n'.join(tip)
     return 0 if slow else 1
 
-class _COM_IGPXTipInfoHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializeTipInfoWithStream, _COM_IGPXQueryTipInfo)):
+class _COM_IGPXInfoTipHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializeInfoTipWithStream, _COM_IGPXQueryInfoTip)):
   CLSID = True
-  ThreadingModel = _COM_ITipInfoHandler_impl.ThreadingModel
+  ThreadingModel = _COM_IInfoTipHandler_impl.ThreadingModel
   Exts = ('.gpx',)
-  _destroy = _COM_ITipInfoHandler_impl._destroy
-_COM_IGPXInitializeTipInfoWithStream._impl = _COM_IGPXQueryTipInfo._impl = _COM_IGPXTipInfoHandler_impl
+  _destroy = _COM_IInfoTipHandler_impl._destroy
+_COM_IGPXInitializeInfoTipWithStream._impl = _COM_IGPXQueryInfoTip._impl = _COM_IGPXInfoTipHandler_impl
 
 
 def DllInstall(bInstall, pszCmdLine):
@@ -1013,8 +1013,8 @@ def DllInstall(bInstall, pszCmdLine):
       COMRegistration.RegistryAddPropertyHandler(_COM_IGPXPropertyHandler_impl, full_details='+GPXShellExt.GPX.PropGroup;GPXShellExt.GPX.Name;GPXShellExt.GPX.Start;GPXShellExt.GPX.End;GPXShellExt.GPX.Dur;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;GPXShellExt.GPX.Wpts', preview_details='+GPXShellExt.GPX.Name;*GPXShellExt.GPX.Start;*GPXShellExt.GPX.End;*GPXShellExt.GPX.Dur;*GPXShellExt.GPX.Dist;*GPXShellExt.GPX.EGain;*GPXShellExt.GPX.AGain;GPXShellExt.GPX.Desc;*GPXShellExt.GPX.Wpts', info_tip='+GPXShellExt.GPX.Name', content_layout='alpha', content_mode_browse='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemNameDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', content_mode_search='~GPXShellExt.GPX.Name;GPXShellExt.GPX.Dur;~System.ItemPathDisplay;~GPXShellExt.GPX.Desc;GPXShellExt.GPX.Dist;GPXShellExt.GPX.EGain;GPXShellExt.GPX.AGain', user=False) and \
       COMRegistration.RegistryAddCOMFactory(_COM_IGPXPreviewHandler_impl, user=False) and \
       COMRegistration.RegistryAddPreviewHandler(_COM_IGPXPreviewHandler_impl, user=False) and \
-      COMRegistration.RegistryAddCOMFactory(_COM_IGPXTipInfoHandler_impl, user=False) and \
-      COMRegistration.RegistryAddTipInfoHandler(_COM_IGPXTipInfoHandler_impl, user=False)
+      COMRegistration.RegistryAddCOMFactory(_COM_IGPXInfoTipHandler_impl, user=False) and \
+      COMRegistration.RegistryAddInfoTipHandler(_COM_IGPXInfoTipHandler_impl, user=False)
   else:
     r = \
       COMRegistration.RegistryRemovePreviewHandler(_COM_IGPXPreviewHandler_impl, user=False) and \
@@ -1023,8 +1023,8 @@ def DllInstall(bInstall, pszCmdLine):
       COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXPropertyHandler_impl, user=False) and \
       COMRegistration.RegistryRemoveShellPropSheetHandler(_COM_IGPXShellPropSheetExt_impl, 'GPXShellExt', user=False) and \
       COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXShellPropSheetExt_impl, user=False) and \
-      COMRegistration.RegistryRemoveTipInfoHandler(_COM_IGPXTipInfoHandler_impl, user=False) and \
-      COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXTipInfoHandler_impl, user=False) and \
+      COMRegistration.RegistryRemoveInfoTipHandler(_COM_IGPXInfoTipHandler_impl, user=False) and \
+      COMRegistration.RegistryRemoveCOMFactory(_COM_IGPXInfoTipHandler_impl, user=False) and \
       COMRegistration.RegistryRemovePropertySchema(p)
   Uninitialize()
   return ISetLastError(0 if r else IGetLastError() or 0x8000ffff)
