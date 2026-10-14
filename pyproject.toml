@@ -6,7 +6,38 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
+name = "GPXShellExt"
+version = "1.0.0"
+authors = [{name = "PCigales"}]
+license = "GPL-3.0-or-later"
+description = "A module in Python 3 providing shell extensions for handling GPX tracks"
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Environment :: Win32 (MS Windows)",
+  "Development Status :: 5 - Production/Stable",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Topic :: Desktop Environment",
+  "Topic :: System :: Filesystems"
+]
+keywords = ["gpx", "shell-extension", "explorer-extension", "propertysheet-handler", "property-handler", "preview-handler", "com"]
+requires-python = ">=3.8"
 dependencies = [
     "WICPy>=1.3.3",
     "GPXTweaker>=1.19.5"
 ]
+
+[project.urls]
+Homepage = "https://github.com/PCigales/GPXShellExt"
+Repository = "https://github.com/PCigales/GPXShellExt"
+"Bug Tracker" = "https://github.com/PCigales/GPXShellExt/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md"] 
