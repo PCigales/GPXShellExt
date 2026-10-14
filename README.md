@@ -119,6 +119,6 @@ The searching and the filtering of the tracks in the file explorer can be perfor
 
 ### ----------Illustrations----------
 
-<img width="472" height="509" src="https://github.com/user-attachments/assets/d3dea6a5-20c2-4e5a-9c16-d15d674829a0" />
-<img width="728" height="446" src="https://github.com/user-attachments/assets/f903f6b2-da8e-4a90-a8c3-117b78b4e578" />
-<img width="1784" height="727" src="https://github.com/user-attachments/assets/dd74756a-abdd-4383-b2c7-20ee30232d1f" />
+<img src="https://github.com/user-attachments/assets/d3dea6a5-20c2-4e5a-9c16-d15d674829a0" />
+<img src="https://github.com/user-attachments/assets/f903f6b2-da8e-4a90-a8c3-117b78b4e578" />
+<img src="https://github.com/user-attachments/assets/dd74756a-abdd-4383-b2c7-20ee30232d1f" />
