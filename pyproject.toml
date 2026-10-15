@@ -33,6 +33,9 @@ Homepage = "https://github.com/PCigales/GPXShellExt"
 Repository = "https://github.com/PCigales/GPXShellExt"
 "Bug Tracker" = "https://github.com/PCigales/GPXShellExt/issues"
 
+[project.scripts]
+GPXShellExt = "GPXShellExt:main"
+
 [tool.setuptools]
 include-package-data = true
 
@@ -40,4 +43,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["*.md"] 
+"*" = ["*.md"]
+
+[tool.distutils.bdist_wheel]
+plat-name = "win_amd64"

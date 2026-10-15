@@ -2,9 +2,23 @@
 # Copyright © 2026 PCigales
 # This program is licensed under the GNU GPLv3 copyleft license (see https://www.gnu.org/licenses)
 
-from wic import *
-from wic import _IUtil, _COMMeta, _WShUtil, _BDSStruct, _COM_IShellExtInit, _COM_IShellPropSheetExt, _COM_IShellPropSheetExt_impl, _COM_IInitializePropertyStoreWithStream, _COM_IPropertyStoreCapabilities, _COM_IPropertyStoreDelegating, _COM_IPropertyHandler_impl, _SPSUtil, _COM_IInitializePreviewHandlerWithStream, _COM_IPreviewHandlerWithFrame, _COM_IPreviewHandlerOleWindow, _COM_IPreviewHandlerVisuals, _COM_IPreviewHandler, _COM_IPreviewHandler_impl, _COM_IInitializeInfoTipWithStream, _COM_IQueryInfoTip, _COM_IInfoTipHandler_impl
-import GPXTweaker
+try:
+  from wic import *
+except:
+  try:
+    from WICPy import *
+  except:
+    import sys
+    import os.path
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    from wic import *
+try:
+  import GPXTweaker
+except:
+  import sys
+  import os.path
+  sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+  import GPXTweaker
 
 comdlg32 = ctypes.WinDLL('comdlg32', use_last_error=True)
 
@@ -363,11 +377,9 @@ class _COM_IGPXShellPropSheetExt(_COM_IShellPropSheetExt):
         return 1
     return r
 
-class _COM_IGPXShellPropSheetExt_impl(metaclass=_COMMeta, interfaces=(_COM_IShellExtInit, _COM_IGPXShellPropSheetExt)):
+class _COM_IGPXShellPropSheetExt_impl(_COM_IShellPropSheetExt_impl, metaclass=_COMImplMeta, interfaces=(_COM_IShellExtInit, _COM_IGPXShellPropSheetExt)):
   CLSID = True
-  ThreadingModel = _COM_IShellPropSheetExt_impl.ThreadingModel
   Exts = ('.gpx',)
-  _destroy = _COM_IShellPropSheetExt_impl._destroy
 _COM_IGPXShellPropSheetExt._impl = _COM_IGPXShellPropSheetExt_impl
 
 
@@ -454,12 +466,10 @@ class _COM_IGPXPropertyStoreCapabilities(_COM_IPropertyStoreCapabilities):
         return 0x80004003
       return 0 if pKey.contents.to_key() not in cls.ReadOnly and self.pcache.GetValue(_COM_IGPXPropertyStoreDelegating.PKEY_GPXSHELLEXT_GPX_PROPGROUP) else 1
 
-class _COM_IGPXPropertyHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializePropertyStoreWithStream, _COM_IGPXPropertyStoreDelegating, _COM_IGPXPropertyStoreCapabilities)):
+class _COM_IGPXPropertyHandler_impl(_COM_IPropertyHandler_impl, metaclass=_COMImplMeta, interfaces=(_COM_IGPXInitializePropertyStoreWithStream, _COM_IGPXPropertyStoreDelegating, _COM_IGPXPropertyStoreCapabilities)):
   CLSID = True
-  ThreadingModel = _COM_IPropertyHandler_impl.ThreadingModel
   Exts = ('.gpx',)
   ManualSafeSave = True
-  _destroy = _COM_IPropertyHandler_impl._destroy
 _COM_IGPXInitializePropertyStoreWithStream._impl = _COM_IGPXPropertyStoreDelegating._impl = _COM_IGPXPropertyStoreCapabilities._impl = _COM_IGPXPropertyHandler_impl
 
 
@@ -797,12 +807,11 @@ class _COM_IGPXPreviewHandler(_COM_IPreviewHandler):
         self.pdwgraphlabelslayout[i] = None
       return super()._Unload(pI)
 
-class _COM_IGPXPreviewHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializePreviewHandlerWithStream, _COM_IGPXPreviewHandlerWithFrame, _COM_IGPXPreviewHandlerOleWindow, _COM_IGPXPreviewHandlerVisuals, _COM_IGPXPreviewHandler)):
+class _COM_IGPXPreviewHandler_impl(_COM_IPreviewHandler_impl, metaclass=_COMImplMeta, interfaces=(_COM_IGPXInitializePreviewHandlerWithStream, _COM_IGPXPreviewHandlerWithFrame, _COM_IGPXPreviewHandlerOleWindow, _COM_IGPXPreviewHandlerVisuals, _COM_IGPXPreviewHandler)):
   CLSID = True
-  ThreadingModel = _COM_IPreviewHandler_impl.ThreadingModel
   Exts = ('.gpx',)
   def _destroy(self):
-    _COM_IPreviewHandler_impl._destroy(self)
+    super()._destroy()
     PCOM.Release(wintypes.LPVOID(self.pd2d1trackcommandlist))
     self.pd2d1trackcommandlist = None
     PCOM.Release(wintypes.LPVOID(self.pd2d1mapbitmap))
@@ -868,16 +877,14 @@ class _COM_IGPXQueryInfoTip(_COM_IQueryInfoTip):
     self.tip = '\r\n'.join(tip)
     return 0 if slow else 1
 
-class _COM_IGPXInfoTipHandler_impl(metaclass=_COMMeta, interfaces=(_COM_IGPXInitializeInfoTipWithStream, _COM_IGPXQueryInfoTip)):
+class _COM_IGPXInfoTipHandler_impl(_COM_IInfoTipHandler_impl, metaclass=_COMImplMeta, interfaces=(_COM_IGPXInitializeInfoTipWithStream, _COM_IGPXQueryInfoTip)):
   CLSID = True
-  ThreadingModel = _COM_IInfoTipHandler_impl.ThreadingModel
   Exts = ('.gpx',)
-  _destroy = _COM_IInfoTipHandler_impl._destroy
 _COM_IGPXInitializeInfoTipWithStream._impl = _COM_IGPXQueryInfoTip._impl = _COM_IGPXInfoTipHandler_impl
 
 
 def DllInstall(bInstall, pszCmdLine):
-  if (l := len((cmdline := pszCmdLine if isinstance(pszCmdLine, str) else ctypes.wstring_at(pszCmdLine)).split('|'))) != 1:
+  if (l := len(cmdline := (pszCmdLine if isinstance(pszCmdLine, str) else ctypes.wstring_at(pszCmdLine)).split('|'))) != 1:
     return ISetLastError(0x80070057)
   rpath = os.path.dirname(os.path.abspath(cmdline[0]))
   p = os.path.join(rpath, 'GPXShellExt.propdesc')
@@ -1030,17 +1037,24 @@ def DllInstall(bInstall, pszCmdLine):
   return ISetLastError(0 if r else IGetLastError() or 0x8000ffff)
 
 
-if __name__ == '__main__' and len(sys.argv) >= 2:
-  if COMRegistration.IsAdmin() is False:
-    if (r := COMRegistration.RunAsAdmin()) is None:
-      r = 0x8000ffff
+def main():
+  if len(sys.argv) >= 2:
+    if COMRegistration.IsAdmin() is False:
+      if (r := COMRegistration.RunAsAdmin()) is None:
+        r = 0x8000ffff
+      print(WError(r))
+      sys.exit(r)
+    if (a := sys.argv[1].lstrip('-/').lower()) == 'register':
+      r = DllInstall(True, os.path.abspath(__file__))
+    elif a == 'unregister':
+      r = DllInstall(False, os.path.abspath(__file__))
+    else:
+      r = 0x80070057
     print(WError(r))
     sys.exit(r)
-  if (a := sys.argv[1].lstrip('-/').lower()) == 'register':
-    r = DllInstall(True, os.path.dirname(os.path.abspath(__file__)))
-  elif a == 'unregister':
-    r = DllInstall(False, os.path.dirname(os.path.abspath(__file__)))
-  else:
-    r = 0x80070057
-  print(WError(r))
-  sys.exit(r)
+
+
+__all__ = tuple(n for n in dir() if not n.startswith('__'))
+
+if __name__ == '__main__':
+  main()
