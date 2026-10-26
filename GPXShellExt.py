@@ -879,14 +879,12 @@ def DllInstall(bInstall, pszCmdLine):
           pcpath = os.path.join(rpath, '__pycache__')
           os.makedirs(pcpath, exist_ok=True)
           r = os.system('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d > nul' % pcpath) == 0
-        else:
-          pdpath = None
       if SETTINGS['map_handling'].get('local_store') and (cpath := SETTINGS['map_handling'].get('local_pattern')):
         while '{' in cpath:
           cpath = os.path.dirname(cpath)
-        if os.path.commonpath((rpath, os.path.dirname(cpath))).lower() == rpath.lower():
+        if (pdpath and os.path.commonpath((pdpath, os.path.dirname(cpath))).lower() == pdpath) or os.path.commonpath((rpath, os.path.dirname(cpath))).lower() == rpath.lower():
           os.makedirs(cpath, exist_ok=True)
-          r &= os.system(('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d /setintegritylevel (OI)(CI)L> nul' if pdpath else 'icacls "%s" /inheritance:d /setintegritylevel (OI)(CI)L> nul') % cpath) == 0
+          r &= os.system('icacls "%s" /grant *S-1-5-32-545:(OI)(CI)M /inheritance:d /setintegritylevel (OI)(CI)L> nul' % cpath) == 0
     except:
       r = False
     fmtid = _COM_IGPXPropertyStoreDelegating.FMTID_GPXSHELLEXT_GPX
